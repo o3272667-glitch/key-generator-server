@@ -1,10 +1,12 @@
 // Fake webserver for Render
-import express from "express";
+const express = require("express");
 const app = express();
+
 app.get("/", (req, res) => res.send("Bot is running."));
 app.listen(process.env.PORT || 3000, () => {
   console.log("Fake webserver running on port " + (process.env.PORT || 3000));
 });
+
 
 import { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder, ButtonBuilder, ActionRowBuilder, ButtonStyle } from "discord.js";
 import dotenv from "dotenv";
