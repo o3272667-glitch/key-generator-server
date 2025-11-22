@@ -49,7 +49,7 @@ client.on("interactionCreate", async (i)=>{
         .setStyle(ButtonStyle.Link)
         .setURL(OFFERWALL_URL + i.user.id);
       const row = new ActionRowBuilder().addComponents(btn);
-      await i.reply({content:"Kattints a gombra a kulcsgeneráláshoz:", components:[row]});
+      await i.reply({content:"Click on the button to generate:", components:[row]});
     }
 
     if (i.commandName==="redeem-key"){
@@ -57,11 +57,11 @@ client.on("interactionCreate", async (i)=>{
       const res = await fetch(`${BACKEND_URL}/redeem?key=${encodeURIComponent(key)}&user=${i.user.id}`);
       const data = await res.json().catch(()=>({valid:false}));
 
-      if (!data.valid) return i.reply("Érvénytelen kulcs.");
+      if (!data.valid) return i.reply("Invalid key.");
 
       const member = await i.guild.members.fetch(i.user.id);
       await member.roles.add(ROLE_ID);
-      i.reply("Rang megadva 1 órára.");
+      i.reply("1 hour in the goods.");
 
       setTimeout(async ()=>{
         const mem = await i.guild.members.fetch(i.user.id);
