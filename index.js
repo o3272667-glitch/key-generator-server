@@ -13,7 +13,7 @@ import fetch from "node-fetch";
 dotenv.config();
 
 const TOKEN = process.env.DISCORD_TOKEN;
-const OFFERWALL_URL = "https://offerwall.me/offerwall/[API_KEY]/"; 
+const OFFERWALL_URL = "https://offerwall.me/offerwall/y1otvbt4v4trgy0z2309oz5bihpnlm/"; 
 const BACKEND_URL = "https://key-generator-server.onrender.com"; 
 const ROLE_ID = "1440435434416115732";
 
