@@ -1,5 +1,4 @@
-// Fake webserver for Render
-const express = require("express");
+import express from "express";
 const app = express();
 
 app.get("/", (req, res) => res.send("Bot is running."));
