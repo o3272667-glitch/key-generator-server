@@ -1,5 +1,5 @@
 {
-  "name": "key-bot",
+  "name": "key-generator-server",
   "version": "1.0.0",
   "type": "module",
   "main": "index.js",
