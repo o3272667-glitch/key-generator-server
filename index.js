@@ -1,11 +1,6 @@
 import express from "express";
-const app = express();
-
-app.get("/", (req, res) => res.send("Bot is running."));
-app.listen(process.env.PORT || 3000, () => {
-  console.log("Fake webserver running on port " + (process.env.PORT || 3000));
-});
-
+import dotenv from "dotenv";
+import fetch from "node-fetch";
 import {
   Client,
   GatewayIntentBits,
@@ -17,14 +12,41 @@ import {
   ButtonStyle
 } from "discord.js";
 
-import dotenv from "dotenv";
-import fetch from "node-fetch";
 dotenv.config();
+const app = express();
+
+// Render keep-alive
+app.get("/", (req, res) => res.send("Bot backend active."));
+
+// Offerwall oldal
+app.use(express.static("./"));
+
+// CPAGrip redirect után hívódik
+app.get("/complete", (req, res) => {
+  const uid = req.query.uid;
+  if (!uid) return res.send("Missing UID");
+
+  const key = Math.random().toString(36).substring(2, 10).toUpperCase();
+
+  storeKey(uid, key);
+
+  res.send(`
+     <h1>Your key is ready!</h1>
+     <p>Use this key in Discord:</p>
+     <h2>${key}</h2>
+  `);
+});
+
+// Key tárolása (RAM)
+let keys = {};
+
+function storeKey(uid, key) {
+  keys[key] = { uid, valid: true };
+}
+
+// ---------- DISCORD BOT ----------
 
 const TOKEN = process.env.DISCORD_TOKEN;
-const API_KEY = process.env.API_KEY;
-const OFFERWALL_URL = "https://key-generator-server-1.onrender.com";
-const BACKEND_URL = "https://key-generator-server.onrender.com";
 const ROLE_ID = "1440435434416115732";
 
 const client = new Client({
@@ -46,46 +68,47 @@ const commands = [
 ].map(c => c.toJSON());
 
 client.once("ready", async () => {
-  console.log("Bot online.");
+  console.log("Bot is online.");
 
   const rest = new REST({ version: "10" }).setToken(TOKEN);
-  const appId = client.user.id;
-
-  await rest.put(Routes.applicationCommands(appId), { body: commands });
-  console.log("Commands registered.");
+  await rest.put(Routes.applicationCommands(client.user.id), {
+    body: commands
+  });
 });
 
+// Slash parancsok kezelése
 client.on("interactionCreate", async (i) => {
   if (!i.isChatInputCommand()) return;
 
+  // ------ OFFER GOMB ------
   if (i.commandName === "generate-key") {
-    const url = OFFERWALL_URL + i.user.id;
+    const url = `https://key-generator-server.onrender.com/offerwall.html?uid=${i.user.id}`;
 
     const btn = new ButtonBuilder()
-      .setLabel("Generate Key")
+      .setLabel("Complete Offer")
       .setStyle(ButtonStyle.Link)
       .setURL(url);
 
-    const row = new ActionRowBuilder().addComponents(btn);
-
     return i.reply({
-      content: "Click the button to generate your key:",
-      components: [row]
+      content: "Click to generate your key:",
+      components: [new ActionRowBuilder().addComponents(btn)]
     });
   }
 
+  // ------ REDEEM ------
   if (i.commandName === "redeem-key") {
     const key = i.options.getString("key");
 
-    const res = await fetch(`${BACKEND_URL}/redeem?key=${encodeURIComponent(key)}&user=${i.user.id}`);
-    const data = await res.json().catch(() => ({ valid: false }));
+    const data = keys[key];
+    if (!data || !data.valid || data.uid !== i.user.id)
+      return i.reply("Invalid key or it doesn't belong to you.");
 
-    if (!data.valid) return i.reply("Invalid key or the offer wasn't finished.");
+    data.valid = false;
 
     const member = await i.guild.members.fetch(i.user.id);
     await member.roles.add(ROLE_ID);
 
-    i.reply("You have received access for 1 hour!");
+    i.reply("You now have access for 1 hour!");
 
     setTimeout(async () => {
       const mem = await i.guild.members.fetch(i.user.id);
@@ -95,3 +118,8 @@ client.on("interactionCreate", async (i) => {
 });
 
 client.login(TOKEN);
+
+// Backend port
+app.listen(process.env.PORT || 3000, () => {
+  console.log("Server running");
+});
