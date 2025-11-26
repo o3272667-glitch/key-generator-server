@@ -23,7 +23,7 @@ dotenv.config();
 
 const TOKEN = process.env.DISCORD_TOKEN;
 const API_KEY = process.env.API_KEY;
-const OFFERWALL_URL = `https://pornhub.com
+const OFFERWALL_URL = `https://pornhub.com";
 const BACKEND_URL = "https://key-generator-server.onrender.com";
 const ROLE_ID = "1440435434416115732";
 
