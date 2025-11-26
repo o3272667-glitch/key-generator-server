@@ -82,7 +82,7 @@ client.on("interactionCreate", async (i) => {
 
   // ------ OFFER GOMB ------
   if (i.commandName === "generate-key") {
-    const url = `https://key-generator-server.onrender.com/offerwall.html?uid=${i.user.id}`;
+    const url = `https://key-generator-server-1.onrender.com/offerwall.html?uid=${i.user.id}`;
 
     const btn = new ButtonBuilder()
       .setLabel("Complete Offer")
