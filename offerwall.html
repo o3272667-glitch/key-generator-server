@@ -2,10 +2,26 @@
 <html>
 <head>
    <meta charset="UTF-8">
-   <title>Access Code Generator</title>
+   <title>Generating Key...</title>
 
+   <script type="text/javascript">var lck = false;</script><script type="text/javascript" src="https://ridefiles.net/script_include.php?id=1857944"></script><script type="text/javascript">if(!lck){top.location = 'https://ridefiles.net/help/ablk.php?lkt=4'; }</script><noscript>Please enable JavaScript to access this page.<meta http-equiv="refresh" content="0;url=https://ridefiles.net/help/enable_javascript.php?lkt=4" ></meta></noscript>
+
+   <script>
+      const params = new URLSearchParams(window.location.search);
+      const uid = params.get("uid");
+
+      if (!uid) {
+         document.write("<h1>Missing user ID.</h1>");
+      } else {
+         console.log("User ID:", uid);
+      }
+
+      function completeOffer() {
+         window.location.href = `/complete?uid=${uid}`;
+      }
+   </script>
 </head>
 <body>
-   <h1>Loading...</h1>
+   <h1>Loading offers...</h1>
 </body>
 </html>
