@@ -1,15 +1,15 @@
 {
   "name": "key-generator-server",
   "version": "1.0.0",
-  "type": "module",
   "main": "index.js",
+  "type": "module",
   "scripts": {
     "start": "node index.js"
   },
   "dependencies": {
-    "express": "^4.19.2",
+    "express": "^4.18.2",
+    "dotenv": "^16.3.1",
     "discord.js": "^14.14.1",
-    "dotenv": "^16.4.1",
     "node-fetch": "^3.3.2"
   }
 }
