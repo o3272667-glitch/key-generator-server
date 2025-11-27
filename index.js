@@ -120,6 +120,57 @@ client.on("interactionCreate", async (i) => {
 client.login(TOKEN);
 
 // Backend port
+
+app.use(express.urlencoded({ extended: true }));
+app.use(express.json());
+
+let completedUsers = {}; // ide mentjük ki teljesített
+
+// POSTBACK HANDLER
+app.post("/postback", (req, res) => {
+    const password = req.body.password;
+    const trackingID = req.body.tracking_id;
+    const payout = req.body.payout;
+
+    // Ha használsz postback jelszót, IDE írd be:
+    const expectedPassword = "mypostbackpass";
+
+    if (password && password !== expectedPassword) {
+        return res.status(403).send("Wrong password");
+    }
+
+    if (!trackingID) {
+        return res.status(400).send("Missing tracking_id");
+    }
+
+    // Generálunk kulcsot
+    const key = "KEY-" + Math.random().toString(36).substring(2, 10).toUpperCase();
+
+    // Elmentjük a userhez
+    completedUsers[trackingID] = {
+        key: key,
+        payout: payout || 0
+    };
+
+    console.log("✔ Postback received for UID:", trackingID, "KEY:", key);
+
+    res.send("OK");
+});
+
+// LEKÉRDEZÉS – használja a Discord bot
+app.get("/getkey", (req, res) => {
+    const uid = req.query.uid;
+
+    if (!uid || !completedUsers[uid]) {
+        return res.json({ success: false, message: "Not completed yet" });
+    }
+
+    res.json({
+        success: true,
+        key: completedUsers[uid].key
+    });
+});
+
 app.listen(process.env.PORT || 3000, () => {
   console.log("Server running");
 });
