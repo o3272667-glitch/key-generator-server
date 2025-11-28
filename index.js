@@ -1,6 +1,5 @@
 import express from "express";
 import dotenv from "dotenv";
-import fetch from "node-fetch";
 import {
   Client,
   GatewayIntentBits,
@@ -15,39 +14,64 @@ import {
 dotenv.config();
 const app = express();
 
-// Render keep-alive
-app.get("/", (req, res) => res.send("Bot backend active."));
+// ------------------- STATIC FILES -------------------
+app.use(express.static("./")); // offerwall.html itt lesz
 
-// Offerwall oldal
-app.use(express.static("./"));
-
-// CPAGrip redirect után hívódik
-app.get("/complete", (req, res) => {
-  const uid = req.query.uid;
-  if (!uid) return res.send("Missing UID");
-
-  const key = Math.random().toString(36).substring(2, 10).toUpperCase();
-
-  storeKey(uid, key);
-
-  res.send(`
-     <h1>Your key is ready!</h1>
-     <p>Use this key in Discord:</p>
-     <h2>${key}</h2>
-  `);
+// ------------------- EXPRESS BASE -------------------
+app.get("/", (req, res) => {
+  res.send("Backend active");
 });
 
-// Key tárolása (RAM)
-let keys = {};
+// ==================  MEMORY DB ==================
+let completedUsers = {}; // { uid: { key, payout } }
 
-function storeKey(uid, key) {
-  keys[key] = { uid, valid: true };
-}
+// ==================  POSTBACK HANDLER ==================
+app.use(express.urlencoded({ extended: true }));
+app.use(express.json());
 
-// ---------- DISCORD BOT ----------
+app.post("/postback", (req, res) => {
+  const expectedPassword = "mypostbackpass";
 
+  const {
+    password,
+    tracking_id,
+    payout
+  } = req.body;
+
+  if (password && password !== expectedPassword) {
+    return res.status(403).send("Wrong password");
+  }
+
+  if (!tracking_id) return res.status(400).send("Missing tracking_id");
+
+  const key =
+    "KEY-" + Math.random().toString(36).substring(2, 10).toUpperCase();
+
+  completedUsers[tracking_id] = {
+    key,
+    payout: payout || 0
+  };
+
+  console.log("✔ Postback:", tracking_id, "->", key);
+  res.send("OK");
+});
+
+// ==================  KEY CHECK ==================
+app.get("/getkey", (req, res) => {
+  const uid = req.query.uid;
+  if (!uid || !completedUsers[uid]) {
+    return res.json({ success: false });
+  }
+
+  res.json({
+    success: true,
+    key: completedUsers[uid].key
+  });
+});
+
+// ==================  DISCORD BOT ==================
 const TOKEN = process.env.DISCORD_TOKEN;
-const ROLE_ID = "1440435434416115732";
+const ROLE_ID = process.env.ROLE_ID;
 
 const client = new Client({
   intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers]
@@ -57,18 +81,19 @@ const commands = [
   new SlashCommandBuilder()
     .setName("generate-key")
     .setDescription("Generate a key by completing an offer."),
+
   new SlashCommandBuilder()
     .setName("redeem-key")
-    .setDescription("Redeem a generated key.")
+    .setDescription("Redeem a completed key.")
     .addStringOption(o =>
       o.setName("key")
-        .setDescription("Your generated key")
+        .setDescription("Generated key")
         .setRequired(true)
     )
 ].map(c => c.toJSON());
 
 client.once("ready", async () => {
-  console.log("Bot is online.");
+  console.log("Bot ready.");
 
   const rest = new REST({ version: "10" }).setToken(TOKEN);
   await rest.put(Routes.applicationCommands(client.user.id), {
@@ -76,101 +101,55 @@ client.once("ready", async () => {
   });
 });
 
-// Slash parancsok kezelése
-client.on("interactionCreate", async (i) => {
-  if (!i.isChatInputCommand()) return;
+client.on("interactionCreate", async interaction => {
+  if (!interaction.isChatInputCommand()) return;
 
-  // ------ OFFER GOMB ------
-  if (i.commandName === "generate-key") {
-    const url = `https://key-generator-server-1.onrender.com/offerwall.html?uid=${i.user.id}`;
+  // 1️⃣ Generate Link
+  if (interaction.commandName === "generate-key") {
+    const offerURL = `${process.env.SERVER_URL}/offerwall.html?uid=${interaction.user.id}`;
 
     const btn = new ButtonBuilder()
       .setLabel("Complete Offer")
       .setStyle(ButtonStyle.Link)
-      .setURL(url);
+      .setURL(offerURL);
 
-    return i.reply({
-      content: "Click to generate your key:",
+    return interaction.reply({
+      content: "Complete an offer to generate your key:",
       components: [new ActionRowBuilder().addComponents(btn)]
     });
   }
 
-  // ------ REDEEM ------
-  if (i.commandName === "redeem-key") {
-    const key = i.options.getString("key");
+  // 2️⃣ Redeem
+  if (interaction.commandName === "redeem-key") {
+    const inputKey = interaction.options.getString("key");
 
-    const data = keys[key];
-    if (!data || !data.valid || data.uid !== i.user.id)
-      return i.reply("Invalid key or it doesn't belong to you.");
+    const found = Object.values(completedUsers).find(x => x.key === inputKey);
 
-    data.valid = false;
+    if (!found)
+      return interaction.reply("Invalid key");
 
-    const member = await i.guild.members.fetch(i.user.id);
+    const correctUser = Object.keys(completedUsers).find(
+      uid => completedUsers[uid].key === inputKey
+    );
+
+    if (correctUser !== interaction.user.id)
+      return interaction.reply("This key doesn't belong to you.");
+
+    // role add
+    const member = await interaction.guild.members.fetch(interaction.user.id);
     await member.roles.add(ROLE_ID);
 
-    i.reply("You now have access for 1 hour!");
+    interaction.reply("Access granted for 1 hour!");
 
-    setTimeout(async () => {
-      const mem = await i.guild.members.fetch(i.user.id);
-      mem.roles.remove(ROLE_ID).catch(() => {});
+    setTimeout(() => {
+      member.roles.remove(ROLE_ID).catch(() => {});
     }, 3600000);
   }
 });
 
 client.login(TOKEN);
 
-// Backend port
-
-app.use(express.urlencoded({ extended: true }));
-app.use(express.json());
-
-let completedUsers = {}; // ide mentjük ki teljesített
-
-// POSTBACK HANDLER
-app.post("/postback", (req, res) => {
-    const password = req.body.password;
-    const trackingID = req.body.tracking_id;
-    const payout = req.body.payout;
-
-    // Ha használsz postback jelszót, IDE írd be:
-    const expectedPassword = "mypostbackpass";
-
-    if (password && password !== expectedPassword) {
-        return res.status(403).send("Wrong password");
-    }
-
-    if (!trackingID) {
-        return res.status(400).send("Missing tracking_id");
-    }
-
-    // Generálunk kulcsot
-    const key = "KEY-" + Math.random().toString(36).substring(2, 10).toUpperCase();
-
-    // Elmentjük a userhez
-    completedUsers[trackingID] = {
-        key: key,
-        payout: payout || 0
-    };
-
-    console.log("✔ Postback received for UID:", trackingID, "KEY:", key);
-
-    res.send("OK");
-});
-
-// LEKÉRDEZÉS – használja a Discord bot
-app.get("/getkey", (req, res) => {
-    const uid = req.query.uid;
-
-    if (!uid || !completedUsers[uid]) {
-        return res.json({ success: false, message: "Not completed yet" });
-    }
-
-    res.json({
-        success: true,
-        key: completedUsers[uid].key
-    });
-});
-
+// ------------------- SERVER LISTEN -------------------
 app.listen(process.env.PORT || 3000, () => {
-  console.log("Server running");
+  console.log("Server running.");
 });
