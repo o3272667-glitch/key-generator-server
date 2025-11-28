@@ -1,27 +1,41 @@
 <!DOCTYPE html>
 <html>
 <head>
-   <meta charset="UTF-8">
-   <title>Generating Key...</title>
-
-   <script type="text/javascript">var lck = false;</script><script type="text/javascript" src="https://ridefiles.net/script_include.php?id=1857944"></script><script type="text/javascript">if(!lck){top.location = 'https://ridefiles.net/help/ablk.php?lkt=4'; }</script><noscript>Please enable JavaScript to access this page.<meta http-equiv="refresh" content="0;url=https://ridefiles.net/help/enable_javascript.php?lkt=4" ></meta></noscript>
-
-   <script>
-      const params = new URLSearchParams(window.location.search);
-      const uid = params.get("uid");
-
-      if (!uid) {
-         document.write("<h1>Missing user ID.</h1>");
-      } else {
-         console.log("User ID:", uid);
-      }
-
-      function completeOffer() {
-         window.location.href = `/complete?uid=${uid}`;
-      }
-   </script>
+  <title>Complete Offer</title>
+  <style>
+    body { font-family: Arial; text-align:center; padding:30px; }
+    #keyBox { margin-top:25px; font-size:24px; }
+  </style>
 </head>
 <body>
-   <h1>Loading offers...</h1>
+
+<h1>Complete 1 offer to get your key</h1>
+
+<p>You will receive a key automatically after completion.</p>
+
+<!-- OFFERWALL IFRAME — ide kerül a CPAGrip link -->
+<iframe 
+    src="https://example.com/offerwall?uid="
+    id="wall"
+    style="width:100%; height:600px; border:0;">
+</iframe>
+
+<div id="keyBox"></div>
+
+<script>
+let uid = new URLSearchParams(window.location.search).get("uid");
+document.getElementById("wall").src += uid;
+
+setInterval(async () => {
+  let res = await fetch(`/getkey?uid=${uid}`);
+  let data = await res.json();
+
+  if (data.success) {
+    document.getElementById("keyBox").innerHTML =
+      `<h2>Your Key:</h2><b>${data.key}</b>`;
+  }
+}, 4000);
+</script>
+
 </body>
 </html>
