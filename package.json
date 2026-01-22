@@ -1,15 +1,15 @@
 {
-  "name": "bitlabs-reward-server",
+  "name": "key-generator-server",
   "version": "1.0.0",
   "main": "index.js",
-  "engines": {
-    "node": ">=18.0.0"
-  },
   "scripts": {
     "start": "node index.js"
   },
   "dependencies": {
     "express": "^4.18.2",
-    "uuid": "^9.0.0"
+    "discord.js": "^14.14.1"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   }
 }
