@@ -1,5 +1,5 @@
 {
-  "name": "key-generator-server-1",
+  "name": "key-generator-server",
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
