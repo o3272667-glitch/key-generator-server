@@ -166,3 +166,17 @@ app.post('/redeem', (req, res) => {
 app.listen(port, '0.0.0.0', () => {
   console.log(`Server running on port ${port}`);
 });
+
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: url('https://giphy.com/gifs/trippy-weird-psychedelic-3ov9k1173PdfJWRsoE') no-repeat center center fixed;
+  background-size: cover;          /* teljes képernyőre feszít */
+  background-attachment: fixed;    /* ne gördjön a user-rel */
+  color: white;
+  text-align: center;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
