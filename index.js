@@ -1,13 +1,6 @@
-const express = require('express');
 const { Client, GatewayIntentBits, EmbedBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, Events } = require('discord.js');
 
-const app = express();
-const port = process.env.PORT || 3000;
-
-app.use(express.urlencoded({ extended: true }));
-
-// Discord bot
-const discordClient = new Client({
+const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMembers,
@@ -16,28 +9,27 @@ const discordClient = new Client({
   ]
 });
 
-discordClient.once(Events.ClientReady, () => {
-  console.log(`Bot online: ${discordClient.user.tag}`);
-});
-
-// Teszt kulcsok
+// Teszt kulcsok (cseréld a saját Discord ID-dre teszteléshez)
 let codes = {}; // később BitLabs generálja
 
-// Egyszerű health check port-ra (Render-nek kell)
-app.get('/', (req, res) => {
-  res.send('Server & Bot running – go to Discord for redeem!');
+// Teszt kulcs hozzáadása (saját ID-ddel)
+const TESZT_USER_ID = 'IDEJÖJJÖNAZSÁJÁT_ID'; // jobb klikk magadra → Copy User ID
+codes[TESZT_USER_ID] = { code: 'TEST12345', expires: Date.now() + 300000 }; // 5 perc
+
+client.once(Events.ClientReady, () => {
+  console.log(`Bot online: ${client.user.tag}`);
 });
 
-// Redeem modal + gombok (a !setup parancs létrehoz embed-et gombokkal)
+// !setup parancs – egyszer futtasd, létrehoz fix embed-et gombokkal
 client.on(Events.MessageCreate, async message => {
   if (message.content === '!setup') {
-    if (!message.member.permissions.has('Administrator')) return message.reply('Admin only!');
+    if (!message.member.permissions.has('Administrator')) return message.reply('Csak admin!');
 
     const embed = new EmbedBuilder()
       .setTitle('Redeem Key – Unlock Content')
       .setDescription('Get your key and unlock premium content!')
       .setColor('#ff69b4')
-      .setImage('https://i.imgur.com/placeholder-teaser.jpg') // cseréld
+      .setImage('https://i.imgur.com/placeholder-teaser.jpg') // cseréld teaser képre
       .addFields({ name: 'Steps', value: '1. Generate Key\n2. Follow steps\n3. Redeem here' });
 
     const row = new ActionRowBuilder()
@@ -47,16 +39,16 @@ client.on(Events.MessageCreate, async message => {
       );
 
     await message.channel.send({ embeds: [embed], components: [row] });
-    await message.reply('Embed created! Pin it if needed.');
+    await message.reply('Embed létrehozva! Pinelheted.');
   }
 });
 
-// Gombok kezelése
+// Gomb kattintás
 client.on(Events.InteractionCreate, async interaction => {
   if (!interaction.isButton()) return;
 
   if (interaction.customId === 'generate_key') {
-    await interaction.reply({ content: 'Generating... (BitLabs soon)', ephemeral: true });
+    await interaction.reply({ content: 'Generating... (BitLabs link coming soon)', ephemeral: true });
   }
 
   if (interaction.customId === 'redeem_key') {
@@ -83,6 +75,8 @@ client.on(Events.InteractionCreate, async interaction => {
   if (!interaction.isModalSubmit()) return;
 
   if (interaction.customId === 'redeem_modal') {
+    await interaction.deferReply({ ephemeral: true });
+
     const code = interaction.fields.getTextInputValue('redeem_code').trim().toUpperCase();
 
     let valid = false;
@@ -105,23 +99,18 @@ client.on(Events.InteractionCreate, async interaction => {
         await member.roles.add(role);
         console.log(`Role added to ${userId}`);
 
-        await interaction.reply({ content: 'Success! Role added permanently 🎉', ephemeral: true });
+        await interaction.editReply({ content: 'Success! Role added permanently 🎉' });
       } catch (err) {
         console.log('Error:', err.message);
-        await interaction.reply({ content: 'Error – contact admin', ephemeral: true });
+        await interaction.editReply({ content: 'Error adding role – contact admin' });
       }
     } else {
-      await interaction.reply({ content: 'Invalid or expired key', ephemeral: true });
+      await interaction.editReply({ content: 'Invalid or expired key' });
     }
   }
 });
 
 // Bot login
-discordClient.login(process.env.DISCORD_TOKEN).catch(err => {
+client.login(process.env.DISCORD_TOKEN).catch(err => {
   console.error('Bot login failed:', err);
-});
-
-// Server start (Render-nek kell port)
-app.listen(port, '0.0.0.0', () => {
-  console.log(`Server running on port ${port}`);
 });
