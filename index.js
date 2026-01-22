@@ -170,7 +170,7 @@ app.listen(port, '0.0.0.0', () => {
 body {
   margin: 0;
   font-family: Arial, sans-serif;
-  background: url('https://media.giphy.com/media/3ov9k1173PdfJWRsoE/giphy.gif') no-repeat center center fixed;
+  background: url('https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExYXE2b2J2am52ZmduOHR6M3l4ZnI4N2FpNWpxMWJjaDExMnR0aGM1YyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3ov9k1173PdfJWRsoE/giphy.gif') no-repeat center center fixed;
   background-size: cover;
   background-attachment: fixed;
   color: white;
