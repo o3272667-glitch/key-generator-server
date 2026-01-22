@@ -170,9 +170,9 @@ app.listen(port, '0.0.0.0', () => {
 body {
   margin: 0;
   font-family: Arial, sans-serif;
-  background: url('https://giphy.com/gifs/trippy-weird-psychedelic-3ov9k1173PdfJWRsoE') no-repeat center center fixed;
-  background-size: cover;          /* teljes képernyőre feszít */
-  background-attachment: fixed;    /* ne gördjön a user-rel */
+  background: url('https://media.giphy.com/media/3ov9k1173PdfJWRsoE/giphy.gif') no-repeat center center fixed;
+  background-size: cover;
+  background-attachment: fixed;
   color: white;
   text-align: center;
   min-height: 100vh;
