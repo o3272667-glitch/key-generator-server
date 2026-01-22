@@ -1,98 +1,114 @@
 const express = require('express');
-const crypto = require('crypto');
-const { v4: uuidv4 } = require('uuid');
-
 const app = express();
 const port = process.env.PORT || 3000;
 
-app.use(express.static('.')); // offerwall.html serve-hez, ha van
+app.use(express.static('public')); // Ha van public mappa CSS/JS-knek
+app.use(express.urlencoded({ extended: true })); // Form adatokhoz
 
-// BitLabs kulcsok env-ből
-const BITLABS_TOKEN = process.env.BITLABS_TOKEN;
-const BITLABS_SECRET = process.env.BITLABS_SECRET;
+// Tároló (memóriában, később fájlba)
+let codes = {}; // { userId: { code: 'ABC123', expires: timestamp } }
 
-if (!BITLABS_TOKEN || !BITLABS_SECRET) {
-  console.error('BITLABS_TOKEN vagy BITLABS_SECRET hiányzik az environment variables-ből!');
-}
-
-// Offerwall oldal (iframe)
-app.get('/offer', (req, res) => {
-  const userId = req.query.user || 'test';
-  const wallUrl = `https://web.bitlabs.ai/?token=${BITLABS_TOKEN}&uid=${userId}`;
-
+// Főoldal – Generate & Redeem gombok
+app.get('/', (req, res) => {
   res.send(`
     <!DOCTYPE html>
-    <html lang="en">
+    <html lang="hu">
     <head>
       <meta charset="UTF-8">
-      <title>Complete Offers</title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Key Mate – Unlock Content</title>
+      <style>
+        body { font-family: Arial, sans-serif; background:#0f0f1a; color:white; text-align:center; padding:20px; margin:0; }
+        h1 { color:#ff69b4; }
+        .container { max-width:500px; margin:auto; background:#1e1e2e; padding:30px; border-radius:15px; box-shadow:0 0 20px rgba(255,105,180,0.3); }
+        .btn { display:block; margin:20px auto; padding:15px 40px; font-size:1.3em; border:none; border-radius:50px; cursor:pointer; transition:0.3s; }
+        .generate { background:#ff69b4; color:white; }
+        .redeem { background:#00ff9d; color:black; }
+        .btn:hover { transform:scale(1.05); }
+        input { padding:12px; font-size:1.2em; width:80%; margin:10px 0; border-radius:8px; border:1px solid #444; background:#2a2a3a; color:white; }
+        .steps { text-align:left; margin:20px 0; }
+        .steps li { margin:10px 0; font-size:1.1em; }
+        img { max-width:100%; border-radius:10px; margin:20px 0; }
+      </style>
     </head>
-    <body style="margin:0; font-family:Arial; text-align:center; padding:20px;">
-      <h1>Complete Offers to Get Your Key</h1>
-      <p>Finish easy tasks below, then you'll get a code for Discord.</p>
-      <iframe src="${wallUrl}" style="width:100%; height:800px; border:none;"></iframe>
+    <body>
+      <div class="container">
+        <h1>Key Mate ♥</h1>
+        <p>Get Your FREE Content!</p>
+
+        <img src="https://i.imgur.com/placeholder-nsfw-teaser.jpg" alt="Teaser" /> <!-- Cseréld saját képre -->
+
+        <h2>Generate Key</h2>
+        <p>Kattints a gombra, kövesd a lépéseket, és kapsz egyedi kulcsot!</p>
+        <a href="/generate" class="btn generate">Generate Key</a>
+
+        <h2>Redeem Your Key</h2>
+        <form action="/redeem" method="POST">
+          <input type="text" name="code" placeholder="Írd be a kulcsodat itt..." required>
+          <button type="submit" class="btn redeem">Redeem Key</button>
+        </form>
+
+        <div class="steps">
+          <h3>Lépések:</h3>
+          <ol>
+            <li>Kattints Generate Key-re</li>
+            <li>Kövesd a lépéseket</li>
+            <li>Másold ki a kulcsot</li>
+            <li>Írd be ide és Redeem!</li>
+          </ol>
+        </div>
+      </div>
     </body>
     </html>
   `);
 });
 
-// BitLabs callback (postback)
-app.get('/bitlabs-callback', (req, res) => {
-  const params = req.query;
-  const receivedHash = params.hash || '';
-
-  // Hash validálás
-  delete params.hash;
-  const sorted = Object.keys(params).sort().map(k => `${k}=${params[k]}`).join('&');
-  const computed = crypto.createHmac('sha1', BITLABS_SECRET)
-    .update(sorted)
-    .digest('hex');
-
-  if (computed.toLowerCase() !== receivedHash.toLowerCase()) {
-    console.log('Invalid hash');
-    return res.status(403).send('Invalid');
-  }
-
-  const userId = params.uid || params.UID;
-  const val = parseFloat(params.val || 0);
-
-  if (val > 0 && userId) {
-    const code = uuidv4().slice(0, 8).toUpperCase();
-    console.log(`Key generated for ${userId}: ${code} (val: ${val})`);
-    // Itt később DB-be mentés, most csak log + success redirect
-    res.redirect(`/success?code=${code}`);
-  } else {
-    res.send('OK');
-  }
-});
-
-// Success oldal
-app.get('/success', (req, res) => {
-  const code = req.query.code || 'ERROR';
+// Generate → átirányít offerwall-ra (most placeholder, később BitLabs)
+app.get('/generate', (req, res) => {
+  // Ha BitLabs approved, ide tedd a redirect-et:
+  // res.redirect('https://web.bitlabs.ai/?token=...&uid=' + req.query.user);
   res.send(`
-    <h1>Your Code: ${code}</h1>
-    <p>Use in Discord: !verify ${code}</p>
-    <p>Valid for 1 hour.</p>
+    <h1>Generating Key...</h1>
+    <p>Átirányítás folyamatban... Kövesd a lépéseket!</p>
+    <meta http-equiv="refresh" content="3;url=https://example.com/placeholder-offerwall">
+    <!-- Ide tedd később a valódi offerwall linket -->
   `);
 });
 
-// Alap route (teszt)
-app.get('/', (req, res) => {
-  res.send('Server is running. Go to /offer?user=yourid');
+// Redeem POST (kulcs ellenőrzés)
+app.post('/redeem', (req, res) => {
+  const code = req.body.code.trim().toUpperCase();
+  let valid = false;
+  let userIdFound = null;
+
+  for (const uid in codes) {
+    if (codes[uid].code === code && Date.now() < codes[uid].expires) {
+      valid = true;
+      userIdFound = uid;
+      delete codes[uid]; // egyszer használatos
+      break;
+    }
+  }
+
+  if (valid) {
+    res.send(`
+      <div style="text-align:center; padding:50px; background:#1e1e2e; color:#00ff9d;">
+        <h1 style="color:#00ff9d;">Sikeres! 🎉</h1>
+        <p>A kulcs elfogadva – rangod aktív 1 órára!</p>
+        <p>Élvezd a contentet! 😏</p>
+      </div>
+    `);
+  } else {
+    res.send(`
+      <div style="text-align:center; padding:50px; background:#1e1e2e; color:#ff4444;">
+        <h1>Hiba</h1>
+        <p>Érvénytelen vagy lejárt kulcs. Próbáld újra!</p>
+        <a href="/" style="color:#ff69b4;">Vissza</a>
+      </div>
+    `);
+  }
 });
 
 app.listen(port, '0.0.0.0', () => {
-  console.log(`Server started on port ${port}`);
-});
-
-app.get('/check-code', (req, res) => {
-  const userId = req.query.user;
-  const inputCode = req.query.code;
-  const data = codes[userId];
-  if (data && data.code === inputCode && Date.now() < data.expires) {
-    delete codes[userId]; // egyszer használatos
-    res.json({ valid: true });
-  } else {
-    res.json({ valid: false });
-  }
+  console.log(`Server running on port ${port}`);
 });
