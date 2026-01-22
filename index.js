@@ -19,9 +19,9 @@ discordClient.once('ready', () => {
 });
 
 // Kulcs tároló
-let codes = {}; // { userId: { code: 'hosszú_kód_32_karakter', expires: timestamp } }
+let codes = {}; // { userId: { code: 'hosszú_kód', expires: timestamp } }
 
-// Főoldal – GIF háttérrel, 32 karakter input
+// Főoldal (GIF háttérrel, 64 karakter input)
 app.get('/', (req, res) => {
   res.send(`
     <!DOCTYPE html>
@@ -81,7 +81,7 @@ app.get('/generate', (req, res) => {
   res.send('<h1 style="text-align:center;padding:150px;background:#0f0f1a;color:#ff69b4;">Generating... (BitLabs soon)</h1>');
 });
 
-// Redeem – rang adás + rövid lejárat teszteléshez
+// Redeem – rang végleg hozzáadva, kód azonnal törlődik
 app.post('/redeem', async (req, res) => {
   const code = (req.body.code || '').trim().toUpperCase();
   let valid = false;
@@ -91,7 +91,7 @@ app.post('/redeem', async (req, res) => {
     if (codes[uid].code === code && Date.now() < codes[uid].expires) {
       valid = true;
       userId = uid;
-      delete codes[uid]; // egyszeri használat
+      delete codes[uid]; // azonnal töröljük – egyszeri + lejárat után úgysem használható
       break;
     }
   }
@@ -103,13 +103,9 @@ app.post('/redeem', async (req, res) => {
       const role = guild.roles.cache.get(process.env.ROLE_ID);
 
       await member.roles.add(role);
-      console.log(`Role added to ${userId}`);
+      console.log(`Role PERMANENTLY added to ${userId}`);
 
-      setTimeout(async () => {
-        await member.roles.remove(role).catch(e => console.log('Remove error:', e));
-      }, 300000); // 5 perc teszteléshez (cseréld 3600000-ra 1 órára)
-
-      res.send('<h1 style="color:#00ff9d;text-align:center;padding:150px;">Success! Role added for 5 minutes (test) 🎉</h1>');
+      res.send('<h1 style="color:#00ff9d;text-align:center;padding:150px;">Success! Role added permanently 🎉</h1>');
     } catch (err) {
       console.log('Error:', err.message);
       res.send('<h1 style="color:red;text-align:center;padding:150px;">Error: ' + err.message + '</h1>');
