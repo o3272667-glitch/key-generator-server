@@ -84,3 +84,15 @@ app.get('/', (req, res) => {
 app.listen(port, '0.0.0.0', () => {
   console.log(`Server started on port ${port}`);
 });
+
+app.get('/check-code', (req, res) => {
+  const userId = req.query.user;
+  const inputCode = req.query.code;
+  const data = codes[userId];
+  if (data && data.code === inputCode && Date.now() < data.expires) {
+    delete codes[userId]; // egyszer használatos
+    res.json({ valid: true });
+  } else {
+    res.json({ valid: false });
+  }
+});
