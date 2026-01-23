@@ -2,7 +2,7 @@ const express = require('express');
 const { Client, GatewayIntentBits, EmbedBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, Events } = require('discord.js');
 
 const app = express();
-const port = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3000;
 
 app.use(express.urlencoded({ extended: true }));
 
@@ -17,50 +17,62 @@ const client = new Client({
 });
 
 client.once(Events.ClientReady, () => {
-  console.log(`Bot online: ${client.user.tag}`);
+  console.log(`Bot logged in as ${client.user.tag}`);
 });
 
-// Teszt kulcs (cseréld saját ID-dre)
+// Codes storage (in-memory for now)
 let codes = {};
-const TESZT_USER_ID = 'IDEJÖJJÖNAZSÁJÁT_ID'; // Copy User ID magadról
-codes[TESZT_USER_ID] = { code: 'TEST12345', expires: Date.now() + 300000 }; // 5 perc
 
-// Egyszerű health check (Render-nek kell a port-hoz)
+// Test code – replace TESZT_USER_ID with your own Discord ID (right-click yourself → Copy User ID)
+const TESZT_USER_ID = 'YOUR_DISCORD_ID_HERE'; // ← PASTE YOUR 18-DIGIT ID HERE
+codes[TESZT_USER_ID] = {
+  code: 'TEST12345',
+  expires: Date.now() + 300000 // 5 minutes
+};
+
+// Health check endpoint (Render needs this)
 app.get('/', (req, res) => {
-  res.send('Bot & Server running – redeem in Discord!');
+  res.send('Bot & server running – use !setup in Discord!');
 });
 
-// !setup parancs – embed gombokkal
+// !setup command – creates embed with buttons
 client.on(Events.MessageCreate, async message => {
   if (message.author.bot) return;
   if (message.content === '!setup') {
-    if (!message.member.permissions.has('Administrator')) return message.reply('Csak admin!');
+    if (!message.member.permissions.has('Administrator')) {
+      return message.reply('Only admins can use this!');
+    }
 
     const embed = new EmbedBuilder()
       .setTitle('Redeem Key – Unlock Content')
       .setDescription('Get your key and unlock premium content!')
       .setColor('#ff69b4')
-      .setImage('https://i.imgur.com/placeholder-teaser.jpg') // teaser
-      .addFields({ name: 'Steps', value: '1. Generate Key\n2. Follow steps\n3. Redeem here' });
+      .setImage('https://i.imgur.com/placeholder-teaser.jpg') // replace with your teaser image URL
+      .addFields({ name: 'Steps', value: '1. Click Generate Key\n2. Follow steps\n3. Redeem here' });
 
     const row = new ActionRowBuilder()
       .addComponents(
-        new ButtonBuilder().setCustomId('generate_key').setLabel('Generate Key').setStyle(ButtonStyle.Primary),
-        new ButtonBuilder().setCustomId('redeem_key').setLabel('Redeem Key').setStyle(ButtonStyle.Success)
+        new ButtonBuilder()
+          .setCustomId('generate_key')
+          .setLabel('Generate Key')
+          .setStyle(ButtonStyle.Primary),
+        new ButtonBuilder()
+          .setCustomId('redeem_key')
+          .setLabel('Redeem Key')
+          .setStyle(ButtonStyle.Success)
       );
 
     await message.channel.send({ embeds: [embed], components: [row] });
-    await message.reply({ content: 'Embed létrehozva! Pinelheted.', ephemeral: true });
+    await message.reply({ content: 'Embed created! You can pin it.', ephemeral: true });
   }
 });
 
-// Gombok
+// Button clicks
 client.on(Events.InteractionCreate, async interaction => {
   if (!interaction.isButton()) return;
 
   if (interaction.customId === 'generate_key') {
-  await interaction.reply({ content: 'https://web.bitlabs.ai/?token=YOUR_TOKEN&uid=' + interaction.user.id, ephemeral: true });
-}
+    await interaction.reply({ content: 'Generating... (BitLabs link coming soon)', ephemeral: true });
   }
 
   if (interaction.customId === 'redeem_key') {
@@ -82,7 +94,7 @@ client.on(Events.InteractionCreate, async interaction => {
   }
 });
 
-// Modal submit
+// Modal submit – code check + role add
 client.on(Events.InteractionCreate, async interaction => {
   if (!interaction.isModalSubmit()) return;
 
@@ -90,14 +102,14 @@ client.on(Events.InteractionCreate, async interaction => {
     await interaction.deferReply({ ephemeral: true });
 
     const code = interaction.fields.getTextInputValue('redeem_code').trim().toUpperCase();
+    const userId = interaction.user.id;
 
     let valid = false;
-    const userId = interaction.user.id;
 
     for (const uid in codes) {
       if (codes[uid].code === code && Date.now() < codes[uid].expires) {
         valid = true;
-        delete codes[uid];
+        delete codes[uid]; // one-time use
         break;
       }
     }
@@ -109,11 +121,11 @@ client.on(Events.InteractionCreate, async interaction => {
         const role = guild.roles.cache.get(process.env.ROLE_ID);
 
         await member.roles.add(role);
-        console.log(`Role added to ${userId}`);
+        console.log(`Role added to ${userId} by ${interaction.user.tag}`);
 
         await interaction.editReply({ content: 'Success! Role added permanently 🎉' });
       } catch (err) {
-        console.log('Error:', err.message);
+        console.log('Role add error:', err.message);
         await interaction.editReply({ content: 'Error adding role – contact admin' });
       }
     } else {
@@ -122,12 +134,12 @@ client.on(Events.InteractionCreate, async interaction => {
   }
 });
 
-// Bot login
+// Login bot
 client.login(process.env.DISCORD_TOKEN).catch(err => {
   console.error('Bot login failed:', err);
 });
 
-// Port nyitása (Render-nek kötelező)
-app.listen(port, '0.0.0.0', () => {
-  console.log(`Server running on port ${port}`);
+// Start Express server (Render requires a port)
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Server running on port ${PORT}`);
 });
