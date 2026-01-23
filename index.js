@@ -59,7 +59,8 @@ client.on(Events.InteractionCreate, async interaction => {
   if (!interaction.isButton()) return;
 
   if (interaction.customId === 'generate_key') {
-    await interaction.reply({ content: 'Generating... (BitLabs soon)', ephemeral: true });
+  await interaction.reply({ content: 'https://web.bitlabs.ai/?token=YOUR_TOKEN&uid=' + interaction.user.id, ephemeral: true });
+}
   }
 
   if (interaction.customId === 'redeem_key') {
